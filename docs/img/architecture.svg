@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 520" role="img" aria-label="fuelsev architecture: cab agent, MQTT with store-and-forward, supervisor ingestor, SQLite, API and dashboard">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3ddc84"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7cc4ff"/></marker>
+    <style>
+      text{font-family:"Segoe UI Variable","Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;fill:#e8eef4}
+      .t{font-size:19px;font-weight:700}.s{font-size:14px;fill:#8a9bad}.k{font-size:12px;font-weight:700;letter-spacing:.12em;fill:#6f8296}
+      .box{fill:#111b25;stroke:#2a3b4b;stroke-width:1.5}.hl{fill:#0e2a22;stroke:#1f6b47;stroke-width:1.5}
+    </style>
+  </defs>
+  <rect width="1280" height="520" rx="22" fill="#0b1219"/>
+  <rect x="28" y="28" width="640" height="464" rx="18" fill="none" stroke="#223140" stroke-dasharray="6 6"/>
+  <rect x="712" y="28" width="540" height="464" rx="18" fill="none" stroke="#223140" stroke-dasharray="6 6"/>
+  <text class="k" x="52" y="62">IN THE CAB  ·  RUNS WITHOUT A NETWORK</text>
+  <text class="k" x="736" y="62">SUPERVISOR SIDE</text>
+
+  <rect class="box" x="52" y="86" width="270" height="86" rx="14"/><text class="t" x="72" y="120">Telemetry · 1 Hz</text><text class="s" x="72" y="146">CAN bus (simulated here)</text>
+  <rect class="hl" x="52" y="210" width="270" height="150" rx="14"/><text class="t" x="72" y="244">CabAgent</text>
+  <text class="s" x="72" y="272">Rules + Isolation Forest</text><text class="s" x="72" y="294">Fuel map + DP planner</text><text class="s" x="72" y="316">Eco score · trip KPIs</text>
+  <rect class="box" x="360" y="86" width="280" height="120" rx="14"/><text class="t" x="380" y="120">Cab display</text><text class="s" x="380" y="146">Coaching in English, Hindi, Telugu</text><text class="s" x="380" y="168">One message at a time, safety first</text>
+  <rect class="box" x="360" y="240" width="280" height="120" rx="14"/><text class="t" x="380" y="274">Store-and-forward</text><text class="s" x="380" y="300">Alerts and trips queue in dead zones</text><text class="s" x="380" y="322">Oldest first, de-duplicated by ID</text>
+  <rect class="box" x="52" y="396" width="588" height="68" rx="14"/><text class="t" x="72" y="426">MQTT client</text><text class="s" x="72" y="448">telemetry QoS 0 · coach QoS 0 · alerts QoS 1 · trips QoS 1 · status retained + last will</text>
+
+  <path d="M187 172V208" stroke="#3ddc84" stroke-width="2.500" marker-end="url(#a)"/>
+  <path d="M322 250L358 160" stroke="#3ddc84" stroke-width="2.500" marker-end="url(#a)"/>
+  <path d="M322 300H358" stroke="#3ddc84" stroke-width="2.500" marker-end="url(#a)"/>
+  <path d="M500 360V394" stroke="#3ddc84" stroke-width="2.500" marker-end="url(#a)"/>
+
+  <rect class="box" x="736" y="396" width="230" height="68" rx="14"/><text class="t" x="756" y="426">Mosquitto</text><text class="s" x="756" y="448">broker · TLS and ACLs in prod</text>
+  <rect class="hl" x="736" y="240" width="230" height="120" rx="14"/><text class="t" x="756" y="274">Ingestor</text><text class="s" x="756" y="300">topic · size · schema checks</text><text class="s" x="756" y="322">machine ID must match topic</text>
+  <rect class="box" x="1000" y="240" width="230" height="120" rx="14"/><text class="t" x="1020" y="274">SQLite</text><text class="s" x="1020" y="300">telemetry, alerts, trips</text><text class="s" x="1020" y="322">cumulative counters stay exact</text>
+  <rect class="hl" x="1000" y="86" width="230" height="120" rx="14"/><text class="t" x="1020" y="120">FastAPI</text><text class="s" x="1020" y="146">alerts · trips · report.csv</text><text class="s" x="1020" y="168">fuel and CO₂e per tonne</text>
+  <rect class="hl" x="736" y="86" width="230" height="120" rx="14"/><text class="t" x="756" y="120">Live dashboard</text><text class="s" x="756" y="146">fleet · alerts · eco scores</text><text class="s" x="756" y="168">in-cab view at /cab</text>
+
+  <path d="M640 430H734" stroke="#7cc4ff" stroke-width="2.500" marker-end="url(#b)"/>
+  <path d="M851 394V362" stroke="#7cc4ff" stroke-width="2.500" marker-end="url(#b)"/>
+  <path d="M968 300H998" stroke="#7cc4ff" stroke-width="2.500" marker-end="url(#b)"/>
+  <path d="M1115 238V208" stroke="#7cc4ff" stroke-width="2.500" marker-end="url(#b)"/>
+  <path d="M998 146H968" stroke="#7cc4ff" stroke-width="2.500" marker-end="url(#b)"/>
+</svg>

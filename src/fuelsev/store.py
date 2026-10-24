@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS telemetry (
     sim_t REAL, trip_no INTEGER, route_id TEXT, leg TEXT, pos_m REAL,
     speed_kmh REAL, gear INTEGER, rpm REAL, payload_t REAL, fuel_lph REAL,
     fuel_total_l REAL, fuel_level_l REAL, odometer_km REAL, engine_s REAL,
-    idle_s REAL, idle_fuel_l REAL, coolant_c REAL, brake_temp_c REAL, oil_kpa REAL
+    idle_s REAL, idle_fuel_l REAL, coolant_c REAL, brake_temp_c REAL, oil_kpa REAL, speed_limit_kmh REAL
 );
 CREATE INDEX IF NOT EXISTS telemetry_machine_ts ON telemetry(machine_id, ts);
 CREATE TABLE IF NOT EXISTS alerts (
@@ -70,6 +70,8 @@ class Store:
         self._shared = sqlite3.connect(":memory:", check_same_thread=False) if self.path == ":memory:" else None
         with self._conn() as c:
             c.executescript(SCHEMA)
+            if "speed_limit_kmh" not in {r["name"] for r in c.execute("PRAGMA table_info(telemetry)")}:
+                c.execute("ALTER TABLE telemetry ADD COLUMN speed_limit_kmh REAL")  # databases from v0.1.0
         self.purge_old()
 
     @contextmanager
@@ -109,11 +111,11 @@ class Store:
             c.execute(
                 "INSERT INTO telemetry (machine_id, ts, sim_t, trip_no, route_id, leg, pos_m, speed_kmh, gear, rpm,"
                 " payload_t, fuel_lph, fuel_total_l, fuel_level_l, odometer_km, engine_s, idle_s, idle_fuel_l,"
-                " coolant_c, brake_temp_c, oil_kpa) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " coolant_c, brake_temp_c, oil_kpa, speed_limit_kmh) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     t.machine_id, t.ts, t.sim_t, t.trip_no, t.route_id, t.leg, t.pos_m, t.speed_kmh, t.gear, t.rpm,
                     t.payload_t, t.fuel_lph, t.fuel_total_l, t.fuel_level_l, t.odometer_km, t.engine_s, t.idle_s,
-                    t.idle_fuel_l, t.coolant_c, t.brake_temp_c, t.oil_kpa,
+                    t.idle_fuel_l, t.coolant_c, t.brake_temp_c, t.oil_kpa, t.speed_limit_kmh,
                 ),
             )
             self._upsert_machine(c, t.machine_id, last_seen=t.ts)
@@ -194,6 +196,14 @@ class Store:
                 "SELECT * FROM telemetry WHERE machine_id = ? ORDER BY ts DESC, id DESC LIMIT 1", (machine_id,)
             ).fetchone()
         return dict(row) if row else None
+
+    def recent_telemetry(self, machine_id: str, limit: int = 120) -> list[dict]:
+        """The last ``limit`` stored samples, oldest first, for charts."""
+        with self._conn() as c:
+            rows = c.execute(
+                "SELECT * FROM telemetry WHERE machine_id = ? ORDER BY ts DESC, id DESC LIMIT ?", (machine_id, limit)
+            ).fetchall()
+        return [dict(r) for r in reversed(rows)]
 
     def alerts(
         self,

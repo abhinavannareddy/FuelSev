@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fuelsev · Fleet control</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1117'/%3E%3Cpath d='M16 5c4 5 7 8.6 7 13a7 7 0 0 1-14 0c0-4.400 3-8 7-13z' fill='%233ddc84'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0a1016; --bg2:#0e161e; --card:#121b24; --card2:#16222d; --line:#1e2c39; --line2:#2a3b4b;
+  --text:#e8eef4; --muted:#8a9bad; --faint:#5d6f82;
+  --green:#3ddc84; --green-d:#1d8c52; --amber:#f6b93b; --red:#ff5c5c; --blue:#4da3ff; --violet:#a78bfa;
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px -12px rgba(0,0,0,.6);
+  --glow:rgba(61,220,132,.12);
+}
+:root[data-theme="light"]{
+  --bg:#f3f6f9; --bg2:#eaeff4; --card:#ffffff; --card2:#f7f9fb; --line:#dfe6ed; --line2:#c9d4de;
+  --text:#101a24; --muted:#586b7e; --faint:#8798a9;
+  --green:#119b57; --green-d:#0d7a45; --amber:#b87800; --red:#d92d2d; --blue:#1a6fd1; --violet:#6d4fd6;
+  --shadow:0 1px 2px rgba(16,26,36,.06),0 8px 24px -14px rgba(16,26,36,.25); --glow:rgba(17,155,87,.08);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f3f6f9; --bg2:#eaeff4; --card:#ffffff; --card2:#f7f9fb; --line:#dfe6ed; --line2:#c9d4de;
+    --text:#101a24; --muted:#586b7e; --faint:#8798a9;
+    --green:#119b57; --green-d:#0d7a45; --amber:#b87800; --red:#d92d2d; --blue:#1a6fd1; --violet:#6d4fd6;
+    --shadow:0 1px 2px rgba(16,26,36,.06),0 8px 24px -14px rgba(16,26,36,.25); --glow:rgba(17,155,87,.08);
+  }
+}
+*{box-sizing:border-box;margin:0}
+html{color-scheme:dark light}
+body{background:radial-gradient(1200px 500px at 15% -10%,var(--glow),transparent 60%),var(--bg);color:var(--text);
+  font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI Variable","Segoe UI",Inter,Roboto,"Noto Sans","Noto Sans Devanagari","Noto Sans Telugu","Nirmala UI",sans-serif;
+  min-height:100vh;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1440px;margin:0 auto;padding:0 20px 40px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:16px;height:60px;padding-bottom:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;font-size:17px}
+.brand svg{width:30px;height:30px}
+.brand small{font-weight:500;color:var(--muted);font-size:13px;margin-left:4px;padding-left:12px;border-left:1px solid var(--line2)}
+.spacer{flex:1}
+.live{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.dot.on{background:var(--green);box-shadow:0 0 0 0 var(--green);animation:pulse 2s infinite}
+.dot.off{background:var(--red)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--green) 55%,transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{all:unset;cursor:pointer;padding:5px 12px;border-radius:7px;font-size:12.5px;color:var(--muted);font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--card2);color:var(--text);box-shadow:0 0 0 1px var(--line2) inset}
+.seg button:focus-visible,.btn:focus-visible,.ack:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn{all:unset;cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.btn:hover{color:var(--text);border-color:var(--line2)}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:22px 0 16px}
+.kpi{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi .k{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.kpi .v{font-size:32px;font-weight:700;letter-spacing:-.02em;margin-top:6px;line-height:1.1}
+.kpi .v small{font-size:14px;font-weight:600;color:var(--muted);margin-left:4px;letter-spacing:0}
+.kpi .s{font-size:12.5px;color:var(--muted);margin-top:6px}
+.kpi.hero::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--green)}
+.kpi .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:99px;margin-left:6px;vertical-align:2px}
+.tag.good{background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green)}
+.tag.bad{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
+
+/* layout */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;align-items:start}
+.h{display:flex;align-items:baseline;gap:10px;margin:6px 2px 10px}
+.h h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.h span{color:var(--faint);font-size:12.5px}
+.fleet{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+
+/* machine card */
+.m{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);position:relative;transition:border-color .2s}
+.m.crit{border-color:color-mix(in srgb,var(--red) 55%,var(--line))}
+.m.crit::after{content:"";position:absolute;inset:-1px;border-radius:16px;box-shadow:0 0 28px -6px color-mix(in srgb,var(--red) 50%,transparent);pointer-events:none}
+.m.offline{opacity:.8}
+.mh{display:flex;align-items:center;gap:10px}
+.mh .id{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.mh .route{color:var(--muted);font-size:12.5px}
+.pill{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid var(--line2);color:var(--muted)}
+.pill.on{color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,transparent);background:color-mix(in srgb,var(--green) 10%,transparent)}
+.pill.off{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 40%,transparent);background:color-mix(in srgb,var(--amber) 10%,transparent)}
+.mid{display:grid;grid-template-columns:130px 1fr;gap:14px;align-items:center;margin:12px 0 8px}
+.speed{position:relative;width:130px;height:130px}
+.speed svg{width:100%;height:100%;transform:rotate(135deg)}
+.speed .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.speed .c b{font-size:34px;line-height:1;letter-spacing:-.03em}
+.speed .c i{font-style:normal;font-size:11px;color:var(--muted);margin-top:2px;font-weight:600}
+.speed .c u{text-decoration:none;font-size:10.5px;color:var(--faint);margin-top:4px}
+.spark{width:100%;height:92px;display:block}
+.spark .lbl{font-size:10px;fill:var(--faint)}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}
+.st{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:7px 8px}
+.st .a{font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.st .b{font-size:15px;font-weight:700;margin-top:1px}
+.st .b.warn{color:var(--amber)}.st .b.bad{color:var(--red)}.st .b.good{color:var(--green)}
+.tank{height:4px;border-radius:2px;background:var(--line);margin-top:5px;overflow:hidden}
+.tank i{display:block;height:100%;background:var(--blue);border-radius:2px}
+.coach{margin-top:10px;display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);min-height:50px}
+.coach .ic{flex:none;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;color:#06210f;background:var(--green)}
+.coach.p1 .ic{background:var(--red);color:#fff}.coach.p2 .ic{background:var(--amber);color:#2a1c00}
+.coach .t{font-size:13.5px;line-height:1.35;flex:1;min-width:0}
+.coach .w{font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:1px}
+.coach.none .t{color:var(--faint)}
+
+/* panels */
+.panel{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.alerts{max-height:880px;overflow:auto}
+.al{display:grid;grid-template-columns:4px 1fr auto;gap:12px;padding:12px 14px 12px 0;border-bottom:1px solid var(--line);align-items:start}
+.al:last-child{border-bottom:0}
+.al .bar{align-self:stretch;border-radius:0 3px 3px 0;background:var(--blue)}
+.al.warning .bar{background:var(--amber)}.al.critical .bar{background:var(--red)}
+.al.ack{opacity:.55}
+.al .top1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.al .code{font-weight:700;font-size:13px}
+.al .mach{font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:6px;background:var(--bg2);border:1px solid var(--line);color:var(--muted)}
+.al .sev{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.al.critical .sev{color:var(--red)}.al.warning .sev{color:var(--amber)}.al.info .sev{color:var(--blue)}
+.al .msg{color:var(--muted);font-size:12.8px;margin-top:3px}
+.al .when{font-size:11.5px;color:var(--faint);margin-top:4px}
+.ack{all:unset;cursor:pointer;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;border:1px solid var(--line2);color:var(--muted)}
+.ack:hover{color:var(--text);border-color:var(--muted)}
+.empty{padding:34px 16px;text-align:center;color:var(--faint)}
+
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-top:20px}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);text-align:right;padding:10px 12px;font-weight:700;border-bottom:1px solid var(--line)}
+td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);font-size:13px}
+th:first-child,td:first-child{text-align:left}
+tr:last-child td{border-bottom:0}
+td b{font-weight:700}
+.eco{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
+.eco i{display:block;width:54px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.eco i s{display:block;height:100%;border-radius:3px;text-decoration:none}
+.bars{padding:6px 16px 16px}
+.brow{display:grid;grid-template-columns:54px 1fr 64px;gap:10px;align-items:center;margin-top:12px}
+.brow .n{font-weight:700;font-size:12.5px}
+.brow .tr{height:12px;border-radius:6px;background:var(--line);overflow:hidden}
+.brow .tr i{display:block;height:100%;border-radius:6px}
+.brow .x{text-align:right;font-weight:700;font-size:13px}
+.foot{margin-top:26px;color:var(--faint);font-size:12px;text-align:center}
+.foot a{color:var(--muted)}
+
+/* auth modal */
+dialog{margin:auto;border:1px solid var(--line2);background:var(--card);color:var(--text);border-radius:16px;padding:22px;width:min(380px,92vw);box-shadow:0 30px 80px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
+dialog h3{font-size:16px;margin-bottom:6px}dialog p{color:var(--muted);font-size:13px;margin-bottom:14px}
+dialog input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line2);background:var(--bg2);color:var(--text);font-size:14px;margin-bottom:14px}
+dialog .row{display:flex;gap:8px;justify-content:flex-end}
+.btn.primary{background:var(--green);color:#052914;border-color:transparent}
+
+@media (max-width:1100px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.alerts{max-height:none}}
+@media (max-width:520px){.fleet{grid-template-columns:1fr}.brand small{display:none}.kpi .v{font-size:26px}.stats{grid-template-columns:repeat(3,1fr)}.wrap{padding:0 14px 30px}.top .wrap{gap:8px}.live span.t{display:none}}
+@media (prefers-reduced-motion:reduce){.dot.on{animation:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0b1117" stroke="#2a3b4b"/><path d="M16 5.5c4 5 7 8.600 7 13a7 7 0 0 1-14 0c0-4.400 3-8 7-13z" fill="#3ddc84"/><path d="M11.500 19.500l3 2.500 5-5" stroke="#0b1117" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    fuelsev <small>Fleet control</small>
+  </div>
+  <div class="spacer"></div>
+  <div class="seg" role="group" aria-label="Report window">
+    <button data-h="1" aria-pressed="false">1 h</button>
+    <button data-h="24" aria-pressed="true">24 h</button>
+    <button data-h="168" aria-pressed="false">7 d</button>
+  </div>
+  <div class="live"><span class="dot" id="dot"></span><span class="t" id="upd">connecting…</span></div>
+  <button class="btn" id="theme" title="Toggle light/dark">◐</button>
+  <button class="btn" id="keybtn" hidden>API key</button>
+</div></header>
+
+<main class="wrap">
+  <section class="kpis" id="kpis" aria-label="Fleet indicators"></section>
+  <div class="grid">
+    <section>
+      <div class="h"><h2>Fleet</h2><span id="fleetsub"></span></div>
+      <div class="fleet" id="fleet"></div>
+      <div class="two">
+        <div>
+          <div class="h"><h2>Recent hauls</h2><span>one row per completed haul cycle</span></div>
+          <div class="panel"><table id="trips"></table></div>
+        </div>
+        <div>
+          <div class="h"><h2>Fuel per tonne</h2><span>by truck, lower is better</span></div>
+          <div class="panel bars" id="bars"></div>
+        </div>
+      </div>
+    </section>
+    <aside>
+      <div class="h"><h2>Alerts</h2><span id="alsub"></span></div>
+      <div class="panel alerts" id="alerts"></div>
+    </aside>
+  </div>
+  <p class="foot">fuelsev · all vehicle and road data is simulated · <a href="/docs">API docs</a> · <a href="/cab?machine=HT-01">in-cab display</a></p>
+</main>
+
+<dialog id="keydlg"><form method="dialog">
+  <h3>API key required</h3><p>This server was started with <code>FUELSEV_API_KEY</code>. The key stays in this tab only.</p>
+  <input id="keyin" type="password" autocomplete="off" placeholder="X-API-Key" aria-label="API key">
+  <div class="row"><button class="btn" value="cancel">Cancel</button><button class="btn primary" value="ok">Connect</button></div>
+</form></dialog>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (v, d = 0) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString("en-IN", {minimumFractionDigits: d, maximumFractionDigits: d});
+let hours = 24, apiKey = "", rep = null, lastReport = 0, busy = false;
+try { apiKey = sessionStorage.getItem("fuelsev-key") || ""; } catch (e) {}
+
+const ROUTES = {ghat_climb:"Ghat climb", ghat_descent:"Ghat descent", monsoon_site:"Monsoon site", nh_corridor:"NH corridor", quarry_haul:"Quarry haul", urban_mixed:"Urban mixed"};
+const CODES = {HARSH_BRAKE:"Harsh braking", OVERSPEED:"Overspeed", NEUTRAL_COASTING:"Coasting in neutral", OVER_REV:"Over-revving", BRAKE_OVERHEAT:"Brake overheating",
+  COOLANT_HIGH:"Coolant high", LOW_OIL_PRESSURE:"Low oil pressure", FUEL_LOSS:"Fuel loss", FUEL_FLOW_HIGH:"Fuel flow high", OVERLOAD:"Overloaded", EXCESS_IDLE:"Excess idling", ANOMALOUS_DRIVING:"Anomalous driving"};
+const LANG = {en:"English", hi:"हिन्दी", te:"తెలుగు"};
+const label = c => CODES[c] || String(c).toLowerCase().replace(/_/g, " ").replace(/^./, m => m.toUpperCase());
+
+async function api(path, opt) {
+  const r = await fetch(path, {...opt, headers: {...(apiKey ? {"X-API-Key": apiKey} : {}), ...(opt && opt.headers)}});
+  if (r.status === 401) { askKey(); throw new Error("auth"); }
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+function askKey() { const d = $("#keydlg"); if (!d.open) d.showModal(); }
+$("#keydlg").addEventListener("close", () => {
+  const v = $("#keyin").value.trim();
+  if ($("#keydlg").returnValue === "ok" && v) { apiKey = v; try { sessionStorage.setItem("fuelsev-key", v); } catch (e) {} tick(true); }
+});
+$("#keybtn").onclick = askKey;
+$("#theme").onclick = () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  const next = cur === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("fuelsev-theme", next); } catch (e) {}
+};
+try { const t = new URLSearchParams(location.search).get("theme") || localStorage.getItem("fuelsev-theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) {}
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+  hours = +b.dataset.h; document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x === b)); lastReport = 0; tick(true);
+});
+
+/* ---------- drawing helpers ---------- */
+function gauge(v, limit, max = 100) {
+  const R = 52, C = 2 * Math.PI * R, arc = C * 0.75;          // 270° sweep
+  const f = Math.max(0, Math.min(1, v / max)), over = limit && v > limit * 1.05;
+  const col = over ? "var(--red)" : v > (limit || max) * .92 ? "var(--amber)" : "var(--green)";
+  const lim = limit ? (() => { const a = (limit / max) * 270 * Math.PI / 180, x = 65 + (R + 0) * Math.cos(a), y = 65 + R * Math.sin(a);
+    const x2 = 65 + (R + 9) * Math.cos(a), y2 = 65 + (R + 9) * Math.sin(a), x1 = 65 + (R - 9) * Math.cos(a), y1 = 65 + (R - 9) * Math.sin(a);
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"/>`; })() : "";
+  return `<svg viewBox="0 0 130 130"><circle cx="65" cy="65" r="${R}" fill="none" stroke="var(--line)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${arc} ${C}"/>
+    <circle cx="65" cy="65" r="${R}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${arc * f} ${C}" style="transition:stroke-dasharray .5s ease"/>${lim}</svg>`;
+}
+function spark(rows, key, color, max) {
+  const W = 300, H = 92, p = 4;
+  if (rows.length < 2) return `<svg class="spark" viewBox="0 0 ${W} ${H}"></svg>`;
+  const vals = rows.map(r => r[key] ?? 0), top = Math.max(max || 0, ...vals) * 1.08 || 1;
+  const x = i => p + i * (W - 2 * p) / (rows.length - 1), y = v => H - p - 10 - (v / top) * (H - 2 * p - 10);
+  const line = vals.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const lim = rows.map((r, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(r.limit ?? 0).toFixed(1)}`).join("");
+  const id = "g" + Math.random().toString(36).slice(2, 8);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Speed, recent minutes">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".35"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${lim}" fill="none" stroke="var(--faint)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+    <path d="${line}L${x(rows.length - 1)},${H - 10}L${x(0)},${H - 10}Z" fill="url(#${id})"/>
+    <path d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+}
+const ago = ts => { const s = Math.max(0, Date.now() / 1000 - ts); return s < 5 ? "just now" : s < 90 ? `${Math.round(s)} s ago` : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
+
+/* ---------- renderers ---------- */
+function renderKpis(r, openAlerts, crit) {
+  const f = r.fleet, cost = (f.fuel_l || 0) * 90, t = r.machines.flatMap(m => m.trips.avg_eco_score != null ? [m.trips.avg_eco_score] : []);
+  const eco = t.length ? t.reduce((a, b) => a + b, 0) / t.length : null;
+  const cards = [
+    ["Fuel per tonne hauled", fmt(f.l_per_tonne, 3), "L/t", `${fmt(f.trips)} hauls · ${fmt(f.payload_t, 0)} t carried`, "hero"],
+    ["CO₂ per tonne hauled", fmt(f.co2e_kg_per_tonne, 2), "kg/t", `tailpipe CO₂ at ${fmt(r.emission_factor_kg_co2_per_l, 2)} kg/L`, ""],
+    ["Fuel burned", fmt(f.fuel_l, 0), "L", `≈ ₹${fmt(cost, 0)} at ₹90/L · ${fmt(f.co2e_kg, 0)} kg CO₂`, ""],
+    ["Distance", fmt(f.distance_km, 0), "km", eco == null ? "no completed hauls yet" : `avg eco score ${fmt(eco, 0)}/100`, ""],
+    ["Open alerts", fmt(openAlerts), "", crit ? `<span class="tag bad">${crit} critical</span> need attention` : `<span class="tag good">all clear</span> no critical alerts`, ""],
+  ];
+  $("#kpis").innerHTML = cards.map(([k, v, u, s, c]) => `<div class="kpi ${c}"><div class="k">${k}</div><div class="v num">${v}<small>${u}</small></div><div class="s">${s}</div></div>`).join("");
+}
+
+function renderMachine(m, lat, rows, coach, rm) {
+  const on = !!m.online, crit = m.open_critical > 0;
+  const speed = lat ? lat.speed_kmh : 0, lim = lat ? lat.speed_limit_kmh || 0 : 0;
+  const tank = lat ? Math.min(100, lat.fuel_level_l / 400 * 100) : 0;
+  const cool = lat ? lat.coolant_c : 0, coolCls = cool > 104 ? "bad" : cool > 97 ? "warn" : "";
+  const eco = rm && rm.trips.avg_eco_score != null ? rm.trips.avg_eco_score : null;
+  const c = coach && coach[0], pc = c ? "p" + c.priority : "none";
+  const ic = c ? (c.priority === 1 ? "!" : c.priority === 2 ? "⚠" : "↗") : "·";
+  return `<article class="m ${crit ? "crit" : ""} ${on ? "" : "offline"}">
+    <div class="mh"><span class="id">${esc(m.machine_id)}</span><span class="route">${lat ? esc(ROUTES[lat.route_id] || lat.route_id) + " · " + esc(lat.leg) : "waiting for data"}</span>
+      <span class="pill ${on ? "on" : "off"}"><span class="dot ${on ? "on" : ""}" style="width:6px;height:6px"></span>${on ? "Online" : "No signal"}</span></div>
+    <div class="mid">
+      <div class="speed">${gauge(speed, lim)}<div class="c"><b class="num">${fmt(speed, 0)}</b><i>km/h</i><u>limit ${lim ? fmt(lim, 0) : "–"}</u></div></div>
+      ${spark(rows, "speed", "var(--blue)", 90)}
+    </div>
+    <div class="stats">
+      <div class="st"><div class="a">Gear</div><div class="b num">${lat ? (lat.gear || "N") : "–"}</div></div>
+      <div class="st"><div class="a">RPM</div><div class="b num">${lat ? fmt(lat.rpm, 0) : "–"}</div></div>
+      <div class="st"><div class="a">Fuel L/h</div><div class="b num">${lat ? fmt(lat.fuel_lph, 1) : "–"}</div></div>
+      <div class="st"><div class="a">Coolant</div><div class="b num ${coolCls}">${lat ? fmt(cool, 0) + "°" : "–"}</div></div>
+      <div class="st"><div class="a">Eco</div><div class="b num ${eco == null ? "" : eco >= 80 ? "good" : eco >= 60 ? "warn" : "bad"}">${eco == null ? "–" : fmt(eco, 0)}</div></div>
+    </div>
+    <div class="st" style="margin-top:6px;padding:7px 10px"><div style="display:flex;justify-content:space-between"><span class="a">Tank</span><span class="b num" style="font-size:12.5px">${lat ? fmt(lat.fuel_level_l, 0) : "–"} L · load ${lat ? fmt(lat.payload_t, 1) : "–"} t</span></div><div class="tank"><i style="width:${tank}%"></i></div></div>
+    <div class="coach ${pc}"><span class="ic">${ic}</span><div class="t"><div class="w">${c ? "Cab display · " + (LANG[c.lang] || esc(c.lang)) : "Cab display"}</div>${c ? esc(c.text) : "No message – driving well."}</div></div>
+  </article>`;
+}
+
+function renderAlerts(list) {
+  const open = list.filter(a => !a.acknowledged).length;
+  $("#alsub").textContent = list.length ? `${open} open of ${list.length} shown` : "";
+  if (!list.length) { $("#alerts").innerHTML = `<div class="empty">No alerts yet.</div>`; return; }
+  $("#alerts").innerHTML = list.map(a => `<div class="al ${esc(a.severity)} ${a.acknowledged ? "ack" : ""}"><span class="bar"></span>
+    <div><div class="top1"><span class="sev">${esc(a.severity)}</span><span class="code">${esc(label(a.code))}</span><span class="mach">${esc(a.machine_id)}</span></div>
+      <div class="msg">${esc(a.message)}</div><div class="when num">${ago(a.ts)}${a.acknowledged ? " · acknowledged by " + esc(a.ack_by) : ""}</div></div>
+    ${a.acknowledged ? "" : `<button class="ack" data-id="${esc(a.id)}">Acknowledge</button>`}</div>`).join("");
+}
+
+function renderTrips(list) {
+  if (!list.length) { $("#trips").innerHTML = `<tr><td class="empty" style="text-align:center">First haul still in progress…</td></tr>`; return; }
+  $("#trips").innerHTML = `<thead><tr><th>Truck</th><th>Route</th><th>Load</th><th>L/t</th><th>CO₂ kg/t</th><th>Eco score</th></tr></thead><tbody>` + list.map(t => {
+    const lpt = t.payload_t > 0 ? t.fuel_l / t.payload_t : null, e = t.eco_score, col = e >= 80 ? "var(--green)" : e >= 60 ? "var(--amber)" : "var(--red)";
+    return `<tr><td><b>${esc(t.machine_id)}</b> <span style="color:var(--faint)">#${t.trip_no}</span></td><td>${esc(ROUTES[t.route_id] || t.route_id)}</td><td class="num">${fmt(t.payload_t, 1)} t</td>
+      <td class="num"><b>${fmt(lpt, 3)}</b></td><td class="num">${lpt == null ? "–" : fmt(lpt * 2.68, 2)}</td>
+      <td><span class="eco num"><b>${fmt(e, 0)}</b><i><s style="width:${e}%;background:${col}"></s></i></span></td></tr>`;
+  }).join("") + `</tbody>`;
+}
+
+function renderBars(r) {
+  const rows = r.machines.filter(m => m.trips.l_per_tonne != null).sort((a, b) => a.trips.l_per_tonne - b.trips.l_per_tonne);
+  if (!rows.length) { $("#bars").innerHTML = `<div class="empty">Waiting for the first completed haul.</div>`; return; }
+  const max = Math.max(...rows.map(m => m.trips.l_per_tonne)), best = rows[0].trips.l_per_tonne;
+  $("#bars").innerHTML = rows.map(m => { const v = m.trips.l_per_tonne, w = v / max * 100;
+    const col = v <= best * 1.05 ? "var(--green)" : v <= best * 1.3 ? "var(--amber)" : "var(--red)";
+    return `<div class="brow"><span class="n">${esc(m.machine_id)}</span><div class="tr"><i style="width:${w}%;background:${col}"></i></div><span class="x num">${fmt(v, 3)}</span></div>`; }).join("")
+    + `<p style="color:var(--faint);font-size:12px;margin-top:16px">Different routes burn different fuel, so compare each truck with its own history as well as with the fleet.</p>`;
+}
+
+/* ---------- loop ---------- */
+async function tick(force) {
+  if (busy) return; busy = true;
+  try {
+    const [machines, alerts, trips] = await Promise.all([api("/machines"), api("/alerts?limit=40"), api("/trips?limit=8")]);
+    if (force || Date.now() - lastReport > 6000) { rep = await api(`/report?hours=${hours}`); lastReport = Date.now(); }
+    const per = await Promise.all(machines.map(async m => {
+      const [lat, rec, coach] = await Promise.all([
+        api(`/telemetry/${encodeURIComponent(m.machine_id)}/latest`).catch(() => null),
+        api(`/telemetry/${encodeURIComponent(m.machine_id)}/recent?limit=90`).catch(() => []),
+        api(`/coach/${encodeURIComponent(m.machine_id)}?limit=1`).catch(() => [])]);
+      return {m, lat, rows: rec.map(r => ({speed: r.speed_kmh, limit: r.speed_limit_kmh || 0})), coach};
+    }));
+    const open = machines.reduce((s, m) => s + m.open_alerts, 0), crit = machines.reduce((s, m) => s + m.open_critical, 0);
+    if (rep) renderKpis(rep, open, crit);
+    $("#fleetsub").textContent = `${machines.filter(m => m.online).length} of ${machines.length} trucks reporting`;
+    $("#fleet").innerHTML = per.map(p => renderMachine(p.m, p.lat, p.rows, p.coach, rep && rep.machines.find(x => x.machine_id === p.m.machine_id))).join("")
+      || `<div class="panel empty" style="grid-column:1/-1">No trucks have reported yet. Start some with <code>fuelsev demo</code>.</div>`;
+    renderAlerts(alerts); renderTrips(trips); if (rep) renderBars(rep);
+    $("#dot").className = "dot on"; $("#upd").textContent = "live · " + new Date().toLocaleTimeString("en-GB");
+  } catch (e) {
+    $("#dot").className = "dot off"; $("#upd").textContent = e.message === "auth" ? "key required" : "disconnected";
+  } finally { busy = false; }
+}
+$("#alerts").addEventListener("click", async e => {
+  const b = e.target.closest(".ack"); if (!b) return;
+  b.disabled = true; try { await api(`/alerts/${encodeURIComponent(b.dataset.id)}/ack`, {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"}); } catch (x) {}
+  tick(true);
+});
+fetch("/health").then(r => r.json()).then(h => { if (h.auth_required) $("#keybtn").hidden = false; }).catch(() => {});
+tick(true); setInterval(tick, 2000);
+</script>
+</body>
+</html>

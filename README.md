@@ -1,15 +1,79 @@
-# fuelsev
+<div align="center">
 
-**In-cab fuel coaching and supervisor alerts for haul trucks on Indian roads.**
+<img src="docs/img/banner.svg" alt="fuelsev: in-cab fuel coaching and supervisor alerts for haul trucks on Indian roads" width="100%">
 
 B.Tech final-year project, JNTU Hyderabad. Author: Abhinav.
+<br>
 
-fuelsev runs an agent in the truck cab that (1) coaches the operator towards fuel-efficient driving, in English, Hindi or Telugu, and (2) alerts a supervisor about unsafe driving and machine faults, even when the truck is in a mobile dead zone. A supervisor API reports **fuel and CO2e per tonne hauled**.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](#supervisor-api)
+[![MQTT](https://img.shields.io/badge/transport-MQTT%20QoS%201-660066?logo=mqtt&logoColor=white)](#architecture)
+[![Docker](https://img.shields.io/badge/run-docker%20compose%20up-2496ED?logo=docker&logoColor=white)](#one-command-docker)
+[![CI](https://github.com/abhinavannareddy/FuelSev/actions/workflows/ci.yml/badge.svg)](https://github.com/abhinavannareddy/FuelSev/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-3ddc84)](LICENSE)
 
-It was designed around the theme of sustainable construction and mining logistics (the kind of fleets operated by equipment makers such as Volvo CE). This project is independent and is not affiliated with or endorsed by Volvo CE. All vehicle data is synthetic (see [Limitations](#limitations)).
+**[Try it in 30 seconds](#try-it-in-30-seconds)** · **[Screenshots](#what-you-get)** · **[Architecture](#architecture)** · **[Results](#results)** · **[API](#supervisor-api)**
+
+</div>
+
+fuelsev runs an agent **in the truck cab** that coaches the operator towards fuel-efficient driving in English, Hindi or Telugu, and alerts a supervisor about unsafe driving and machine faults, **even when the truck is in a mobile dead zone**. The supervisor gets a live fleet dashboard and an API that reports **fuel and CO2e per tonne hauled**.
+
+It is built around sustainable construction and mining logistics (the kind of fleets operated by equipment makers such as Volvo CE) and around the conditions Indian haul fleets actually face: ghat roads, speed breakers, toll plazas, monsoon mud, overloading, diesel pilferage. This project is independent and is not affiliated with or endorsed by Volvo CE. All vehicle data is synthetic (see [Limitations](#limitations)).
+
+<table>
+<tr>
+<td align="center" width="25%"><h2>up to 20%</h2>less fuel per tonne on highway and town hauls (planned vs typical driver, simulated)</td>
+<td align="center" width="25%"><h2>0 alerts lost</h2>in dead zones: queued on the truck, sent oldest first, stored once</td>
+<td align="center" width="25%"><h2>3 languages</h2>English, Hindi and Telugu cab messages</td>
+<td align="center" width="25%"><h2>6 road types</h2>ghat climb and descent, NH, quarry, urban, monsoon site</td>
+</tr>
+</table>
+
+## Try it in 30 seconds
+
+No broker, no Docker, no hardware. One command starts the supervisor API and a simulated fleet of five trucks (one in a ghat dead zone with an engine-overheat fault, one with a diesel leak):
+
+```bash
+git clone https://github.com/abhinavannareddy/FuelSev.git && cd FuelSev
+pip install -e .
+fuelsev train            # optional, a few minutes: adds the Isolation Forest detector
+fuelsev demo --open      # dashboard at http://127.0.0.1:8000
+```
+
+| URL | What it is |
+|---|---|
+| `/` | live supervisor dashboard |
+| `/cab?machine=HT-01` | the operator's in-cab display for one truck |
+| `/docs` | interactive API documentation |
+
+## What you get
+
+### Supervisor dashboard
+
+Live fleet view: fuel and CO2e per tonne, rupee cost, per-truck speed against the limit, gear, revs, coolant, tank, eco score, and what each cab display is telling its driver right now, in the driver's own language. Alerts arrive with severity and can be acknowledged. Light and dark themes, works on a phone, no external assets (it runs on a closed network).
+
+<p align="center"><img src="docs/img/dashboard.png" alt="fuelsev supervisor dashboard showing five trucks, fleet fuel per tonne, and a live alert feed" width="100%"></p>
+
+### In-cab display
+
+Built for a glance from the driver's seat: one big speed dial with the limit sign, one message at a time (safety before faults before efficiency), large type, no menus. Messages are shown in English, Hindi or Telugu.
+
+<p align="center"><img src="docs/img/cab-display.png" alt="In-cab display showing speed, speed limit and a Hindi coaching message" width="88%"></p>
+
+### Features
+
+- **Fuel coaching** from a fuel map: tells the driver which gear to be in and when to ease off, only when the saving is worth the nag.
+- **Optimal speed and gear plans** from a dynamic-programming planner that respects torque, rpm, traction, speed breakers, hairpins and stops.
+- **Unsafe-driving detection**: explicit rules (overspeed, harsh braking, neutral coasting, over-revving, overload) plus an unsupervised Isolation Forest for patterns no single threshold describes.
+- **Fault and theft alerts**: brake and coolant temperature, oil pressure, fuel loss and abnormal fuel flow.
+- **Store-and-forward uplink** so ghat and quarry dead zones never lose an alert or a trip.
+- **Fuel and CO2e per tonne** reports (JSON and CSV), computed from cumulative counters so dropped packets do not distort totals.
+- **Hardened ingest**: schema validation on every message, machine ID must match its topic, optional API key, CSV formula injection neutralised, non-root container.
 
 ## Contents
 
+- [Try it in 30 seconds](#try-it-in-30-seconds)
+- [What you get](#what-you-get)
 - [Architecture](#architecture)
 - [Designed for Indian roads](#designed-for-indian-roads)
 - [How it works](#how-it-works)
@@ -22,16 +86,7 @@ It was designed around the theme of sustainable construction and mining logistic
 
 ## Architecture
 
-```
- ┌─────────────────────────── in the cab ────────────────────────────┐        ┌────────── supervisor side ──────────┐
- │ telemetry (CAN bus; simulated here)                               │        │                                     │
- │      │                                                            │  MQTT  │  Mosquitto ──► Ingestor ──► SQLite  │
- │      ▼                                                            │ ─────► │                          │          │
- │  CabAgent ── rules + Isolation Forest ──► alerts (QoS 1, buffered)│        │                          ▼          │
- │      │      ── fuel map + DP plan ──────► coach messages (en/hi/te)│        │                   FastAPI: alerts,  │
- │      └─────── trip summaries (QoS 1, buffered)                    │        │                   trips, report     │
- └───────────────────────────────────────────────────────────────────┘        └─────────────────────────────────────┘
-```
+<p align="center"><img src="docs/img/architecture.svg" alt="fuelsev architecture" width="100%"></p>
 
 MQTT topics (`v1` is the schema version):
 
@@ -68,6 +123,8 @@ The route scenarios, detectors and delivery layer are built around conditions th
 
 **Fuel map (SciPy).** A grid of fuel rate against engine speed and torque is interpolated with `scipy.interpolate.RegularGridInterpolator`. The map is *synthetic*: a Willans-line diesel model with a plausible best efficiency of about 200 g/kWh, written to `src/fuelsev/data/fuel_map.csv`. Swap in a real engine map by providing a CSV with the same columns.
 
+<p align="center"><img src="docs/img/fuel-map.png" alt="Synthetic engine fuel map" width="48%"> <img src="docs/img/planner.png" alt="Dynamic-programming plan for a ghat climb" width="50%"></p>
+
 **Planner (NumPy dynamic programming).** Each leg is discretised into 25 m nodes and speeds into 0.5 m/s levels. The DP state is (node, speed, gear). A transition assumes constant acceleration over the step, computes wheel force, converts to engine torque and rpm for the gear, and looks up fuel in the map. It is vectorised over all speed pairs and gears at once. The objective is fuel plus a time penalty (`lam_l_per_s`) plus gear-shift and service-brake penalties; transitions that exceed the full-load torque curve, the rpm window or the traction limit are infeasible. The output is a target speed and gear for every point on the route.
 
 **Coach.** Every second the coach considers: rule detections (safety and faults), look-ahead warnings, "shift to gear N" computed by asking the fuel map what each gear would burn right now, "ease off to X km/h" when the truck is well above the plan's speed and the saving is at least 8 %, descent-gear advice and idle shutdown. One message is shown at a time (safety first), with per-message cooldowns so the operator is not nagged.
@@ -79,6 +136,15 @@ The route scenarios, detectors and delivery layer are built around conditions th
 **Eco score (0–100).** 100 minus penalties for fuel burned above the best-gear choice (up to 35 points, saturating at 15 %), harsh braking per 10 minutes (25, saturating at 6), time more than 10 % over the limit (20, at 15 %) and excess idling (20, at 10 %).
 
 ## Quick start
+
+### Fastest: the built-in demo
+
+```bash
+pip install -e .
+fuelsev demo --open
+```
+
+See [Try it in 30 seconds](#try-it-in-30-seconds).
 
 ### One command (Docker)
 
@@ -96,7 +162,7 @@ curl "localhost:8000/report?hours=1"
 curl -o report.csv "localhost:8000/report.csv?hours=1"
 ```
 
-Interactive API docs: http://localhost:8000/docs. Ports are bound to `127.0.0.1` only.
+The dashboard is at http://localhost:8000/ and the interactive API docs at http://localhost:8000/docs. Ports are bound to `127.0.0.1` only.
 
 ### Without Docker
 
@@ -110,7 +176,7 @@ fuelsev train                                             # writes models/anomal
 fuelsev evaluate                                          # benchmark; writes results/
 
 # with a Mosquitto broker on localhost:1883
-fuelsev api &
+fuelsev api &                                             # also serves the dashboard at /
 fuelsev machine --id HT-01 --route ghat_descent --driver aggressive --model models/anomaly.joblib
 ```
 
@@ -130,9 +196,11 @@ The bundled `mosquitto.conf` allows anonymous clients. That is for development o
 
 | Endpoint | Description |
 |---|---|
+| `GET /`, `GET /cab` | live dashboard and in-cab display (the pages are open; the data they read needs the API key if one is set) |
 | `GET /health` | liveness, MQTT state, ingest counters |
 | `GET /machines` | machines with online state and open alert counts |
-| `GET /telemetry/{id}/latest` | most recent stored sample |
+| `GET /telemetry/{id}/latest`, `/recent` | most recent stored sample, or the last N for charts |
+| `GET /coach/{id}` | latest cab-display messages (in memory, not stored) |
 | `GET /alerts` | filter by `machine_id`, `severity`, `code`, `acknowledged`, `since`; paged |
 | `POST /alerts/{id}/ack` | acknowledge an alert |
 | `GET /trips` | trip summaries |
@@ -146,6 +214,8 @@ All numbers come from the simulator and the same agent that runs in the cab. The
 
 ### Fuel per tonne hauled (L/t, one haul cycle including the empty return)
 
+<p align="center"><img src="docs/img/benchmark.png" alt="Fuel per tonne by driving style on six routes" width="100%"></p>
+
 | Route | planner | eco | typical | aggressive | typical → planner |
 |---|---|---|---|---|---|
 | ghat_climb | 0.701 | 0.711 | 0.747 | 0.771 | 6% less fuel |
@@ -158,6 +228,8 @@ All numbers come from the simulator and the same agent that runs in the cab. The
 Multiply by 2.68 for kg CO2 per tonne (for example 0.640 L/t on the NH corridor is 1.72 kg CO2/t; the planner's 0.513 L/t is 1.37 kg CO2/t). The savings are largest on open highway and in town, where driver behaviour decides fuel use, and smallest on the steep or muddy roads where the terrain forces the speed. The "planner" driver tracks the DP plan exactly and is the upper bound on what coaching could achieve; real operators will capture only part of the gap.
 
 ### Unsafe-driving detection
+
+<p align="center"><img src="docs/img/detection.png" alt="Precision, recall and F1 of rules, Isolation Forest and both combined" width="82%"></p>
 
 Held-out seeds, 38,314 ten-second windows across the six routes and four driving styles; 1,931 windows (5 %) are labelled unsafe by the simulator's hidden ground truth. "Rules" counts safety rules only.
 
@@ -202,12 +274,15 @@ src/fuelsev/
   coach.py, agent.py, i18n.py         cab coaching, the in-cab agent, en/hi/te messages
   mqtt.py, machine.py                 MQTT link, store-and-forward, machine process
   store.py, api.py                    SQLite store, ingestor and FastAPI app
+  demo.py, web/                       one-command demo fleet, dashboard and cab display pages
   metrics.py, constants.py            fuel/CO2e metrics, documented constants
   training.py, evaluate.py, cli.py    training, benchmarks, command line
 tests/                                pytest suite
 scripts/mqtt_e2e.py                   end-to-end MQTT check without Docker
+scripts/make_figures.py               regenerates docs/img charts from the code and results/
+docs/img/                             README images
 ```
 
 ## Licence
 
-MIT. Copyright (c) 2026 Abhinv.
+MIT. Copyright (c) 2026 Abhinav.

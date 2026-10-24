@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" role="img" aria-label="fuelsev: in-cab fuel coaching and supervisor alerts for haul trucks on Indian roads">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#07131b"/><stop offset=".62" stop-color="#0f2a2c"/><stop offset="1" stop-color="#16382f"/></linearGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3ddc84"/><stop offset="1" stop-color="#9af0b9"/></linearGradient>
+    <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c4a44"/><stop offset="1" stop-color="#0f2d2c"/></linearGradient>
+    <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#143a38"/><stop offset="1" stop-color="#0b2527"/></linearGradient>
+    <radialGradient id="sun" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#3ddc84" stop-opacity=".55"/><stop offset="1" stop-color="#3ddc84" stop-opacity="0"/></radialGradient>
+    <style>text{font-family:"Segoe UI Variable","Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif}</style>
+  </defs>
+  <rect width="1280" height="400" fill="url(#sky)"/>
+  <circle cx="1010" cy="130" r="190" fill="url(#sun)"/>
+  <circle cx="1010" cy="130" r="46" fill="#bff5d3" opacity=".9"/>
+  <path d="M0 300 L120 210 L210 262 L330 168 L460 270 L560 226 L690 300 V400 H0Z" fill="url(#m2)" opacity=".9"/>
+  <path d="M560 330 L700 218 L790 280 L900 190 L1010 262 L1130 176 L1280 280 V400 H560Z" fill="url(#m1)"/>
+  <path d="M-20 392 C220 392 360 352 560 352 S880 330 1010 300 S1220 250 1300 248" fill="none" stroke="#0a1418" stroke-width="64" stroke-linecap="round"/>
+  <path d="M-20 392 C220 392 360 352 560 352 S880 330 1010 300 S1220 250 1300 248" fill="none" stroke="#f6b93b" stroke-width="3" stroke-dasharray="18 16" opacity=".85"/>
+  <g transform="translate(786 262)">
+    <ellipse cx="96" cy="86" rx="112" ry="9" fill="#000" opacity=".35"/>
+    <path d="M6 18h120l12 30h38v34H6z" fill="#e9eef2"/>
+    <path d="M126 18h20l32 30v34h-40z" fill="#3ddc84"/>
+    <path d="M138 28h20l16 18h-36z" fill="#0b1c24"/>
+    <path d="M14 -6 L112 -6 L126 18 H6z" fill="#f6b93b"/>
+    <rect x="6" y="64" width="180" height="8" fill="#0b1c24" opacity=".35"/>
+    <g fill="#0b1c24"><circle cx="40" cy="84" r="17"/><circle cx="76" cy="84" r="17"/><circle cx="154" cy="84" r="17"/></g>
+    <g fill="#9aa8b4"><circle cx="40" cy="84" r="7"/><circle cx="76" cy="84" r="7"/><circle cx="154" cy="84" r="7"/></g>
+    <path d="M186 60h12" stroke="#fff3b0" stroke-width="5" stroke-linecap="round"/>
+    <path d="M198 56 L270 40 V80 L198 66z" fill="#fff3b0" opacity=".16"/>
+  </g>
+  <g transform="translate(70 92)">
+    <rect width="76" height="76" rx="20" fill="#0b1117" stroke="#2a3b4b" stroke-width="2"/>
+    <path d="M38 12c9.500 12 16.500 20 16.500 31a16.500 16.500 0 0 1-33 0c0-11 7-19 16.500-31z" fill="#3ddc84"/>
+    <path d="M29 46l7.500 6 12-12" stroke="#0b1117" stroke-width="4.500" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="172" y="150" font-size="78" font-weight="800" fill="#f2f7fa" letter-spacing="-2">fuel<tspan fill="url(#g)">sev</tspan></text>
+  <text x="72" y="214" font-size="27" font-weight="600" fill="#cfe0e8">In-cab fuel coaching and supervisor alerts</text>
+  <text x="72" y="250" font-size="27" font-weight="600" fill="#cfe0e8">for haul trucks on Indian roads.</text>
+  <g font-size="17" font-weight="700">
+    <g transform="translate(72 290)"><rect width="190" height="40" rx="20" fill="#0b1c24" stroke="#2a4a44"/><text x="95" y="26" text-anchor="middle" fill="#3ddc84">up to 20% less fuel</text></g>
+    <g transform="translate(274 290)"><rect width="150" height="40" rx="20" fill="#0b1c24" stroke="#2a4a44"/><text x="75" y="26" text-anchor="middle" fill="#f6b93b">works offline</text></g>
+    <g transform="translate(436 290)"><rect width="200" height="40" rx="20" fill="#0b1c24" stroke="#2a4a44"/><text x="100" y="26" text-anchor="middle" fill="#7cc4ff">English · हिन्दी · తెలుగు</text></g>
+  </g>
+</svg>

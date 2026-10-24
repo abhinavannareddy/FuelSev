@@ -39,7 +39,7 @@ fuelsev = "fuelsev.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-fuelsev = ["data/*.csv"]
+fuelsev = ["data/*.csv", "web/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

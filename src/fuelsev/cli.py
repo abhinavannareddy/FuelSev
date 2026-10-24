@@ -112,6 +112,14 @@ def cmd_api(args) -> int:
     return 0
 
 
+def cmd_demo(args) -> int:
+    from .demo import run_demo
+
+    model = args.model if args.model and Path(args.model).exists() else None
+    run_demo(args.host, args.port, args.speedup, model, open_browser=args.open, trucks=args.trucks)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="fuelsev", description="In-cab fuel coaching and supervisor alerts for haul trucks.")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -162,6 +170,15 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8000)
     s.set_defaults(fn=cmd_api)
+
+    s = sub.add_parser("demo", help="run the dashboard with a simulated fleet (no broker or Docker needed)")
+    s.add_argument("--host", default="127.0.0.1")
+    s.add_argument("--port", type=int, default=8000)
+    s.add_argument("--speedup", type=float, default=60.0, help="simulated seconds per wall-clock second")
+    s.add_argument("--trucks", type=int, default=5, choices=range(1, 6), metavar="1-5")
+    s.add_argument("--model", default="models/anomaly.joblib")
+    s.add_argument("--open", action="store_true", help="open the dashboard in a browser")
+    s.set_defaults(fn=cmd_demo)
     return p
 
 

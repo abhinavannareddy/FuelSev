@@ -17,22 +17,27 @@ import logging
 import os
 import threading
 import time
+from collections import deque
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, ValidationError
 
 from . import __version__
 from .constants import CO2_KG_PER_L_DIESEL
 from .mqtt import MAX_PAYLOAD_BYTES, TOPIC_ROOT, BrokerConfig, Link, parse_topic
-from .schemas import Alert, Status, Telemetry, TripSummary
+from .schemas import Alert, CoachMessage, Status, Telemetry, TripSummary
 from .store import Store
 
 log = logging.getLogger(__name__)
 
 _CSV_DANGEROUS = ("=", "+", "-", "@", "\t", "\r")
+
+_WEB = Path(__file__).parent / "web"
+COACH_KEEP = 25  # coach messages remembered per machine (a live view, never stored)
 
 
 @dataclass
@@ -65,13 +70,15 @@ class Ingestor:
         self.accepted = 0
         self.rejected = 0
         self.duplicates = 0
+        self.coach: dict[str, deque[dict]] = {}
         self._lock = threading.Lock()
         self.link = Link(
             broker,
             client_id="fuelsev-api",
             on_message=self.handle,
             subscriptions=((f"{TOPIC_ROOT}/+/telemetry", 0), (f"{TOPIC_ROOT}/+/alerts", 1),
-                           (f"{TOPIC_ROOT}/+/trips", 1), (f"{TOPIC_ROOT}/+/status", 1)),
+                           (f"{TOPIC_ROOT}/+/trips", 1), (f"{TOPIC_ROOT}/+/status", 1),
+                           (f"{TOPIC_ROOT}/+/coach", 0)),
             persistent_session=True,
         )
 
@@ -100,13 +107,18 @@ class Ingestor:
                 msg = TripSummary.model_validate_json(payload)
             elif kind == "status":
                 msg = Status.model_validate_json(payload)
-            else:  # coach messages are for the cab display only
-                return
+            else:
+                msg = CoachMessage.model_validate_json(payload)
         except ValidationError:
             self._count("rejected")
             return
         if msg.machine_id != machine_id:
             self._count("rejected")
+            return
+        if kind == "coach":  # shown in the live cab view; not stored
+            with self._lock:
+                self.coach.setdefault(machine_id, deque(maxlen=COACH_KEEP)).append(msg.model_dump())
+            self._count("accepted")
             return
         try:
             if kind == "telemetry":
@@ -132,16 +144,16 @@ class Ingestor:
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     store = Store(settings.db_path)
-    ingestor = Ingestor(store, settings.broker) if settings.ingest else None
+    ingestor = Ingestor(store, settings.broker)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        if ingestor:
+        if settings.ingest:
             ingestor.start()
         try:
             yield
         finally:
-            if ingestor:
+            if settings.ingest:
                 ingestor.stop()
 
     app = FastAPI(
@@ -170,11 +182,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {
             "status": "ok",
             "version": __version__,
-            "mqtt_connected": bool(ing and ing.link.connected),
-            "accepted": ing.accepted if ing else 0,
-            "rejected": ing.rejected if ing else 0,
-            "duplicates": ing.duplicates if ing else 0,
+            "mqtt_connected": bool(settings.ingest and ing.link.connected),
+            "auth_required": settings.api_key is not None,
+            "accepted": ing.accepted,
+            "rejected": ing.rejected,
+            "duplicates": ing.duplicates,
         }
+
+    def _page(name: str) -> HTMLResponse:
+        return HTMLResponse(
+            (_WEB / name).read_text(encoding="utf-8"),
+            headers={"Content-Security-Policy": "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
+                     "connect-src 'self'; img-src 'self' data:", "X-Content-Type-Options": "nosniff", "Cache-Control": "no-cache"},
+        )
+
+    @app.get("/", include_in_schema=False)
+    def dashboard() -> HTMLResponse:
+        return _page("dashboard.html")
+
+    @app.get("/cab", include_in_schema=False)
+    def cab_display() -> HTMLResponse:
+        return _page("cab.html")
 
     @app.get("/machines", dependencies=auth)
     def machines() -> list[dict]:
@@ -186,6 +214,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if row is None:
             raise HTTPException(status_code=404, detail="no telemetry for this machine")
         return row
+
+    @app.get("/telemetry/{machine_id}/recent", dependencies=auth)
+    def recent(machine_id: str, limit: int = Query(default=120, ge=1, le=1000)) -> list[dict]:
+        return store.recent_telemetry(machine_id, limit)
+
+    @app.get("/coach/{machine_id}", dependencies=auth)
+    def coach_feed(machine_id: str, limit: int = Query(default=10, ge=1, le=COACH_KEEP)) -> list[dict]:
+        """The latest cab-display messages, newest first (kept in memory only)."""
+        with ingestor._lock:
+            items = list(ingestor.coach.get(machine_id, ()))
+        return items[::-1][:limit]
 
     @app.get("/alerts", dependencies=auth)
     def alerts(
