@@ -1,0 +1,45 @@
+{
+ "n_windows": 38314,
+ "n_unsafe": 1931,
+ "rules": {
+  "precision": 0.838,
+  "recall": 0.603,
+  "f1": 0.702,
+  "false_alarm_rate": 0.006
+ },
+ "forest": {
+  "precision": 0.395,
+  "recall": 0.565,
+  "f1": 0.465,
+  "false_alarm_rate": 0.046
+ },
+ "union": {
+  "precision": 0.461,
+  "recall": 0.752,
+  "f1": 0.572,
+  "false_alarm_rate": 0.047
+ },
+ "auc_forest": 0.914,
+ "flagged_by_driver": {
+  "aggressive": {
+   "rules": 0.112,
+   "forest": 0.258,
+   "unsafe_share": 0.158
+  },
+  "eco": {
+   "rules": 0.0,
+   "forest": 0.003,
+   "unsafe_share": 0.002
+  },
+  "planner": {
+   "rules": 0.0,
+   "forest": 0.008,
+   "unsafe_share": 0.002
+  },
+  "typical": {
+   "rules": 0.041,
+   "forest": 0.037,
+   "unsafe_share": 0.051
+  }
+ }
+}
