@@ -2,7 +2,7 @@
 
 **In-cab fuel coaching and supervisor alerts for haul trucks on Indian roads.**
 
-B.Tech final-year project, JNTU Hyderabad. Author: Abhinv.
+B.Tech final-year project, JNTU Hyderabad. Author: Abhinav.
 
 fuelsev runs an agent in the truck cab that (1) coaches the operator towards fuel-efficient driving, in English, Hindi or Telugu, and (2) alerts a supervisor about unsafe driving and machine faults, even when the truck is in a mobile dead zone. A supervisor API reports **fuel and CO2e per tonne hauled**.
 
