@@ -18,7 +18,7 @@ B.Tech final-year project, JNTU Hyderabad. Author: Abhinav.
 
 fuelsev runs an agent **in the truck cab** that coaches the operator towards fuel-efficient driving in English, Hindi or Telugu, and alerts a supervisor about unsafe driving and machine faults, **even when the truck is in a mobile dead zone**. The supervisor gets a live fleet dashboard and an API that reports **fuel and CO2e per tonne hauled**.
 
-It is built around sustainable construction and mining logistics (the kind of fleets operated by equipment makers such as Volvo CE) and around the conditions Indian haul fleets actually face: ghat roads, speed breakers, toll plazas, monsoon mud, overloading, diesel pilferage. This project is independent and is not affiliated with or endorsed by Volvo CE. All vehicle data is synthetic (see [Limitations](#limitations)).
+It is built around sustainable construction and mining logistics and around the conditions Indian haul fleets actually face: ghat roads, speed breakers, toll plazas, monsoon mud, overloading, diesel pilferage. All vehicle data is synthetic (see [Limitations](#limitations)).
 
 <table>
 <tr>
