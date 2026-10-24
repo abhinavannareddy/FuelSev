@@ -252,7 +252,7 @@ The factor is **tailpipe CO2 only**: methane and nitrous oxide and upstream (wel
 
 ## Limitations
 
-- **The engine fuel map and vehicle are synthetic**, not Volvo CE or any manufacturer's data. Absolute litres are indicative; the *relative* differences between driving styles are the meaningful output.
+- **The engine fuel map and vehicle are synthetic**, . Absolute litres are indicative; the *relative* differences between driving styles are the meaningful output.
 - **Routes are composites, not surveyed roads.** Grades, surface quality, hazard positions and speed caps are assumptions. Speed limits in particular must be checked for your state and vehicle class before any real use.
 - **Results are simulated.** The driver models, including the "unsafe episodes" used as detection ground truth, are my own constructions. The detector scores reflect how well it finds those simulated behaviours, and will differ on real drivers.
 - **The Isolation Forest is trained on simulated baseline driving.** On a real fleet it should be retrained on that fleet's normal driving.
